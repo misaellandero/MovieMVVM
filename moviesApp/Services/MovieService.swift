@@ -16,7 +16,6 @@ public class MoviesService {
     var nextPageToLoad =  1
     
     var nowPlayingMovies = [Movie]()
-    var movieDetail : MovieDetail?
     
     
     init() {
@@ -59,32 +58,34 @@ public class MoviesService {
         
     }
     
-    func loadDetailMovie(id : Int) {
+    func loadDetailMovie(id : Int, completion: @escaping (Result<MovieDetail, Error>) -> Void) {
         
         let urlString = String("\(baseAPIURL)\(id)\(apiKey)\(language)")
         let url = URL(string: urlString)!
         let request = URLRequest(url: url)
-        let task = URLSession.shared.dataTask(with: request, completionHandler:parseDetailMovie(data:response:error:))
+        let task = URLSession.shared.dataTask(with: request, completionHandler: { [weak self] data, response , error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                return completion(.failure(error))
+            }
+            
+            if let data = data {
+                do {
+                    let movieDetail = try self.decodeMovieDetail(from: data)
+                    completion(.success(movieDetail))
+                } catch {
+                    completion(.failure(error))
+                }
+            }
+            
+        })
         task.resume()
          
     }
     
-    func parseDetailMovie(data: Data?, response: URLResponse?, error: Error?){
-            
-            if let data = data {
-                if let decodedResponse = try? JSONDecoder().decode(moviesApp.MovieDetail.self, from: data) {
-                    // we have good data – go back to the main thread
-                    DispatchQueue.main.async {
-                        self.movieDetail  = decodedResponse
-                    }
-                    // everything is good, so we can exit
-                    return
-                }
-            }
-            
-            // if we're still here it means there was a problem
-            print("Fetch failed: \(error?.localizedDescription ?? "Unknown error")")
-        
+    private func decodeMovieDetail(from data: Data) throws -> MovieDetail {
+        return try JSONDecoder().decode(MovieDetail.self, from: data)
     }
     
 }

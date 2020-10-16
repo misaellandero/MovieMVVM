@@ -36,10 +36,16 @@ class StateController: ObservableObject, RandomAccessCollection {
     }
     
     
-    func loadMovieDetails(id: Int){
-        DispatchQueue.main.async {
-            self.moviesService.loadDetailMovie(id: id)
-            self.movie = self.moviesService.movieDetail
+    func loadMovieDetails(id: Int) {
+            self.moviesService.loadDetailMovie(id: id) { result in
+                switch result {
+                case let .success(movie):
+                    DispatchQueue.main.async {
+                        self.movie = movie
+                    }
+                
+                case .failure: break // Here you can manage a error if any
+                }
         }
     }
     
